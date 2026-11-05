@@ -1,0 +1,59 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * Copyright (c) 2019, softathome
+ */
+
+#ifndef USE_HOSTCC
+#include <malloc.h>
+#endif
+#include <image.h>
+#include <uboot_aes.h>
+
+int image_aes_decrypt(struct image_cipher_info *info,
+		      const void *cipher, size_t cipher_len,
+		      void **data, size_t *size)
+{
+#ifndef USE_HOSTCC
+	unsigned char key_exp[AES256_EXPAND_KEY_LENGTH];
+	unsigned int aes_blocks, key_len = info->cipher->key_len;
+
+	/*
+	 * The ciphertext is a whole number of AES blocks by construction, and
+	 * the decryption below writes one full block at a time, so anything
+	 * else would overflow the output buffer.
+	 */
+	if (!cipher_len || cipher_len % AES_BLOCK_LENGTH) {
+		printf("Invalid ciphertext length\n");
+		return -EINVAL;
+	}
+
+	/*
+	 * Decryption produces exactly cipher_len bytes, so the unciphered
+	 * size the image claims cannot be larger than that.
+	 */
+	if (info->size_unciphered > cipher_len) {
+		printf("Invalid unciphered size\n");
+		return -EINVAL;
+	}
+
+	*data = malloc(cipher_len);
+	if (!*data) {
+		printf("Can't allocate memory to decrypt\n");
+		return -ENOMEM;
+	}
+	*size = info->size_unciphered;
+
+	memcpy(&key_exp[0], info->key, key_len);
+
+	/* First we expand the key. */
+	aes_expand_key((u8 *)info->key, key_len, key_exp);
+
+	/* Calculate the number of AES blocks to encrypt. */
+	aes_blocks = cipher_len / AES_BLOCK_LENGTH;
+
+	aes_cbc_decrypt_blocks(key_len, key_exp, (u8 *)info->iv,
+			       (u8 *)cipher, *data, aes_blocks);
+#endif
+
+	return 0;
+}

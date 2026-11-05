@@ -1,0 +1,27 @@
+U-Boot for Freescale i.MX7
+
+SPL Stack size and location notes
+---------------------------------
+
+See figure 6-22 in i.MX 7Dual/Solo Reference manuals:
+
+The i.MX7D/S free OCRAM area is 0x910000-0x946C00. Some ranges are used by the
+Boot ROM while loading the program image however; conflicting with these
+addresses will result in image truncation and boot failure in certain boot
+modes:
+
+- OCRAM_EPCD and OCRAM_PXP are reserved according to the reference manual
+- 0x910000-0x911000 are unavailable due to erratum ERR011166
+
+In consequence, the SPL image (which contains a 4KiB IVT + DCD header) must fit
+inside the following ranges:
+
+- Header: 0x911000-0x912000 (4KiB)
+- SPL code: 0x912000-0x920000 (56KiB)
+
+For historical reasons, 8KiB of extra padding are added between SPL and U-Boot
+proper in the combined u-boot-with-spl.imx image, making the U-Boot offset 4KB
+header + 56KB max size + 8KB extra padding = 68KiB.
+
+The full OCRAM can be used at runtime for stack/heap/BSS. The stack is set up to
+grow from the end of the free area at 0x946BB8 by default.

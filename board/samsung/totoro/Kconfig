@@ -1,0 +1,8 @@
+if TARGET_TOTORO
+config SYS_BOARD
+	default "totoro"
+config SYS_VENDOR
+	default "samsung"
+config SYS_CONFIG_NAME
+	default "totoro"
+endif

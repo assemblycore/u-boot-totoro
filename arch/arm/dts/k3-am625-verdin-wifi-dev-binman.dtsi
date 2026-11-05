@@ -1,0 +1,274 @@
+// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
+/*
+ * Copyright 2023 Toradex
+ */
+
+#include "k3-am625-binman.dtsi"
+
+#ifdef CONFIG_TARGET_VERDIN_AM62_R5
+
+&rcfg_yaml_tifs {
+	config = "tifs-rm-cfg.yaml";
+};
+
+&binman {
+	tiboot3-am62x-hs-verdin.bin {
+		filename = "tiboot3-am62x-hs-verdin.bin";
+		insert-template = <&tiboot3_am625_hs_template>;
+	};
+	tiboot3-am62x-hs-fs-verdin.bin {
+		filename = "tiboot3-am62x-hs-fs-verdin.bin";
+		symlink = "tiboot3.bin";
+		insert-template = <&tiboot3_am625_hs_fs_template>;
+	};
+	tiboot3-am62x-gp-verdin.bin {
+		filename = "tiboot3-am62x-gp-verdin.bin";
+		insert-template = <&tiboot3_am625_gp_template>;
+	};
+};
+
+#endif /* CONFIG_TARGET_VERDIN_AM62_R5 */
+
+#ifdef CONFIG_TARGET_VERDIN_AM62_A53
+
+#define SPL_VERDIN_AM62_DTB "spl/dts/ti/k3-am625-verdin-wifi-dev.dtb"
+#define VERDIN_AM62_DTB "u-boot.dtb"
+
+&binman {
+	ti-spl {
+		insert-template = <&ti_spl_am625_template>;
+		fit {
+			images {
+				fdt-0 {
+					description = "k3-am625-verdin-wifi-dev";
+					type = "flat_dt";
+					arch = "arm";
+					compression = "none";
+					ti-secure {
+						content = <&spl_verdin_am62_dtb>;
+						keyfile = "custMpk.pem";
+					};
+					spl_verdin_am62_dtb: blob-ext {
+						filename = SPL_VERDIN_AM62_DTB;
+					};
+				};
+			};
+
+			configurations {
+				default = "conf-hs-fs";
+
+				conf-hs-fs {
+					description = "k3-am625-verdin-wifi-dev-hs-fs";
+					firmware = "atf";
+					loadables = "tee", "tifsstub-fs", "dm", "spl";
+					fdt = "fdt-0";
+				};
+				conf-hs-se {
+					description = "k3-am625-verdin-wifi-dev-hs-se";
+					firmware = "atf";
+					loadables = "tee", "tifsstub-hs", "dm", "spl";
+					fdt = "fdt-0";
+				};
+				conf-gp {
+					description = "k3-am625-verdin-wifi-dev-gp";
+					firmware = "atf";
+					loadables = "tee", "tifsstub-gp", "dm", "spl";
+					fdt = "fdt-0";
+				};
+			};
+		};
+	};
+};
+
+&binman {
+	u-boot {
+		insert-template = <&u_boot_template>;
+
+		fit {
+			images {
+				uboot {
+					description = "U-Boot fot AM625 Verdin Board";
+				};
+
+				fdt-0 {
+					description = "k3-am625-verdin-wifi-dev";
+					type = "flat_dt";
+					arch = "arm";
+					compression = "none";
+					ti-secure {
+						content = <&verdin_am62_dtb>;
+						keyfile = "custMpk.pem";
+					};
+					verdin_am62_dtb: blob-ext {
+						filename = VERDIN_AM62_DTB;
+					};
+					hash {
+						algo = "crc32";
+					};
+				};
+			};
+
+			configurations {
+				default = "conf-0";
+
+				conf-0 {
+					description = "k3-am625-verdin-wifi-dev";
+					firmware = "uboot";
+					loadables = "uboot";
+					fdt = "fdt-0";
+				};
+			};
+		};
+	};
+};
+
+&binman {
+	ti-spl_unsigned {
+		insert-template = <&ti_spl_unsigned_am625_template>;
+
+		fit {
+			images {
+				fdt-0 {
+					description = "k3-am625-verdin-wifi-dev";
+					type = "flat_dt";
+					arch = "arm";
+					compression = "none";
+					blob {
+						filename = SPL_VERDIN_AM62_DTB;
+					};
+				};
+			};
+
+			configurations {
+				default = "conf-hs-fs";
+
+				conf-hs-fs {
+					description = "k3-am625-verdin-wifi-dev-hs-fs";
+					firmware = "atf";
+					loadables = "tee", "tifsstub-fs", "dm", "spl";
+					fdt = "fdt-0";
+				};
+				conf-hs-se {
+					description = "k3-am625-verdin-wifi-dev-hs-se";
+					firmware = "atf";
+					loadables = "tee", "tifsstub-hs", "dm", "spl";
+					fdt = "fdt-0";
+				};
+				conf-gp {
+					description = "k3-am625-verdin-wifi-dev-gp";
+					firmware = "atf";
+					loadables = "tee", "tifsstub-gp", "dm", "spl";
+					fdt = "fdt-0";
+				};
+			};
+		};
+	};
+};
+
+&binman {
+	u-boot_unsigned {
+		insert-template = <&u_boot_unsigned_template>;
+
+		fit {
+			images {
+				uboot {
+					description = "U-Boot for AM625 Verdin Board";
+				};
+
+				fdt-0 {
+					description = "k3-am625-verdin-wifi-dev";
+					type = "flat_dt";
+					arch = "arm";
+					compression = "none";
+					blob {
+						filename = VERDIN_AM62_DTB;
+					};
+					hash {
+						algo = "crc32";
+					};
+				};
+			};
+
+			configurations {
+				default = "conf-0";
+
+				conf-0 {
+					description = "k3-am625-verdin-wifi-dev";
+					firmware = "uboot";
+					loadables = "uboot";
+					fdt = "fdt-0";
+				};
+			};
+		};
+	};
+};
+
+&binman {
+	firmware-verdin-am62-gp.bin {
+		filename = "firmware-verdin-am62-gp.bin";
+
+		blob-ext@1 {
+			filename = "tiboot3-am62x-gp-verdin.bin";
+		};
+
+		blob-ext@2 {
+			filename = "tispl.bin_unsigned";
+			/*
+			 * This value matches CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR
+			 * from R5 SPL config.
+			 */
+			offset = <0x80000>;
+		};
+
+		blob-ext@3 {
+			filename = "u-boot.img_unsigned";
+			offset = <(CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR * 512)>;
+		};
+	};
+
+	firmware-verdin-am62-hs.bin {
+		filename = "firmware-verdin-am62-hs.bin";
+
+		blob-ext@1 {
+			filename = "tiboot3-am62x-hs-verdin.bin";
+		};
+
+		blob-ext@2 {
+			filename = "tispl.bin";
+			/*
+			 * This value matches CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR
+			 * from R5 SPL config.
+			 */
+			offset = <0x80000>;
+		};
+
+		blob-ext@3 {
+			filename = "u-boot.img";
+			offset = <(CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR * 512)>;
+		};
+	};
+
+	firmware-verdin-am62-hs-fs.bin {
+		filename = "firmware-verdin-am62-hs-fs.bin";
+
+		blob-ext@1 {
+			filename = "tiboot3-am62x-hs-fs-verdin.bin";
+		};
+
+		blob-ext@2 {
+			filename = "tispl.bin";
+			/*
+			 * This value matches CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR
+			 * from R5 SPL config.
+			 */
+			offset = <0x80000>;
+		};
+
+		blob-ext@3 {
+			filename = "u-boot.img";
+			offset = <(CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR * 512)>;
+		};
+	};
+};
+
+#endif /* CONFIG_TARGET_VERDIN_AM62_A53 */

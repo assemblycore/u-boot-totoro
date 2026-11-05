@@ -1,0 +1,53 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * https://beagleboard.org/play
+ *
+ * Copyright (C) 2022-2023 Texas Instruments Incorporated - https://www.ti.com/
+ * Copyright (C) 2022-2023 Robert Nelson, BeagleBoard.org Foundation
+ */
+
+#include "k3-am625-beagleplay.dts"
+#include "k3-am625-beagleplay-ddr4-1600MTs.dtsi"
+#include "k3-am62-ddr.dtsi"
+
+#include "k3-am625-beagleplay-u-boot.dtsi"
+#include "k3-am625-r5.dtsi"
+
+&a53_0 {
+	power-domains = <&k3_pds 61 TI_SCI_PD_EXCLUSIVE>,
+			<&k3_pds 135 TI_SCI_PD_EXCLUSIVE>;
+	assigned-clocks = <&k3_clks 61 0>, <&k3_clks 135 0>;
+	assigned-clock-parents = <&k3_clks 61 2>;
+	assigned-clock-rates = <200000000>, <1250000000>;
+};
+
+&main_pktdma {
+	ti,sci = <&dm_tifs>;
+};
+
+&main_bcdma {
+	ti,sci = <&dm_tifs>;
+};
+
+&binman {
+	tiboot3-am62x-gp-evm.bin {
+		filename = "tiboot3-am62x-gp-evm.bin";
+		symlink = "tiboot3.bin";
+		insert-template = <&tiboot3_am625_gp_template>;
+	};
+};
+
+#include "k3-binman-capsule-r5.dtsi"
+
+// Capsule update GUIDs in string form.  See beagleplay.h
+#define BEAGLEPLAY_TIBOOT3_IMAGE_GUID_STR "0e225a09-f720-4d57-9120-e28f737f5a5e"
+
+&capsule_tiboot3 {
+	efi-capsule {
+		image-guid = BEAGLEPLAY_TIBOOT3_IMAGE_GUID_STR;
+
+		blob {
+			filename = "tiboot3-am62x-gp-evm.bin";
+		};
+	};
+};

@@ -1,0 +1,13 @@
+.. SPDX-License-Identifier: GPL-2.0-or-later
+
+SpacemiT
+========
+.. toctree::
+   :maxdepth: 1
+
+   bananapi-f3
+   k1-mmc
+   k1-spl
+   smtimage
+   spacemit-pico-itx
+

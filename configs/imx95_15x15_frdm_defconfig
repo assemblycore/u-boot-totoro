@@ -1,0 +1,4 @@
+#include <configs/imx95_frdm.config>
+CONFIG_DEFAULT_DEVICE_TREE="freescale/imx95-15x15-frdm"
+CONFIG_TARGET_IMX95_15X15_FRDM=y
+CONFIG_DEFAULT_FDT_FILE="imx95-15x15-frdm.dtb"

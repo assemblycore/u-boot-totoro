@@ -1,0 +1,12 @@
+// SPDX-License-Identifier: GPL-2.0+
+/dts-v1/;
+/ {
+	model = "Samsung Galaxy Y GT-S5360";
+	compatible = "samsung,totoro", "brcm,bcm21553";
+	#address-cells = <1>;
+	#size-cells = <1>;
+	memory@80000000 {
+		device_type = "memory";
+		reg = <0x80000000 0x08000000>;
+	};
+};

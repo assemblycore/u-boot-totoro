@@ -1,0 +1,308 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Based on k3-am625-sk-binman.dtsi
+ *
+ * Copyright (C) 2022 - 2023 PHYTEC Messtechnik GmbH
+ * Author: Wadim Egorov <w.egorov@phytec.de>
+ */
+
+#include "k3-am625-binman.dtsi"
+
+#ifdef CONFIG_TARGET_PHYCORE_AM62X_R5
+
+&rcfg_yaml_tifs {
+	config = "tifs-rm-cfg.yaml";
+};
+
+&binman {
+	tiboot3-am62x-hs-phycore-som.bin {
+		filename = "tiboot3-am62x-hs-phycore-som.bin";
+		insert-template = <&tiboot3_am625_hs_template>;
+	};
+	tiboot3-am62x-hs-fs-phycore-som.bin {
+		filename = "tiboot3-am62x-hs-fs-phycore-som.bin";
+		symlink = "tiboot3.bin";
+		insert-template = <&tiboot3_am625_hs_fs_template>;
+	};
+	tiboot3-am62x-gp-phycore-som.bin {
+		filename = "tiboot3-am62x-gp-phycore-som.bin";
+		insert-template = <&tiboot3_am625_gp_template>;
+	};
+};
+
+#include "k3-binman-capsule-r5.dtsi"
+
+&capsule_tiboot3 {
+	efi-capsule {
+		/*
+		 * The GUID is generated dynamically by taking a namespace UUID and hashing
+		 * it with the board compatible and fw_image name:
+		 * mkeficapsule guidgen k3-am625-r5-phycore-som-2gb.dtb PHYCORE_AM62X_TIBOOT3
+		 */
+		image-guid = "C7D64D6D-10B2-54BC-A3BF-06A9DC3653D9";
+	};
+};
+
+#endif /* CONFIG_TARGET_PHYCORE_AM62X_R5 */
+
+#ifdef CONFIG_TARGET_PHYCORE_AM62X_A53
+#define SPL_AM625_PHYBOARD_LYRA_DTB "spl/dts/ti/k3-am625-phyboard-lyra-rdk.dtb"
+#define AM625_PHYBOARD_LYRA_DTB "u-boot.dtb"
+
+&binman {
+	ti-spl {
+		insert-template = <&ti_spl_am625_template>;
+		fit {
+			images {
+				fdt-0 {
+					description = "k3-am625-phyboard-lyra-rdk";
+					type = "flat_dt";
+					arch = "arm";
+					compression = "none";
+					ti-secure {
+						content = <&spl_am625_phyboard_lyra_dtb>;
+						keyfile = "custMpk.pem";
+					};
+					spl_am625_phyboard_lyra_dtb: blob-ext {
+						filename = SPL_AM625_PHYBOARD_LYRA_DTB;
+					};
+				};
+			};
+
+			configurations {
+				default = "conf-hs-fs";
+
+				conf-hs-fs {
+					description = "k3-am625-phyboard-lyra-rdk-hs-fs";
+					firmware = "atf";
+					loadables = "tee", "tifsstub-fs", "dm", "spl";
+					fdt = "fdt-0";
+				};
+				conf-hs-se {
+					description = "k3-am625-phyboard-lyra-rdk-hs-se";
+					firmware = "atf";
+					loadables = "tee", "tifsstub-hs", "dm", "spl";
+					fdt = "fdt-0";
+				};
+				conf-gp {
+					description = "k3-am625-phyboard-lyra-rdk-gp";
+					firmware = "atf";
+					loadables = "tee", "tifsstub-gp", "dm", "spl";
+					fdt = "fdt-0";
+				};
+			};
+		};
+	};
+};
+
+&binman {
+	u-boot {
+		insert-template = <&u_boot_template>;
+
+		fit {
+			images {
+				uboot {
+					description = "U-Boot for phyCORE-AM62x";
+				};
+
+				som-no-rtc {
+					description = "k3-am6xx-phycore-disable-rtc";
+					type = "flat_dt";
+					compression = "none";
+					load = <0x8F000000>;
+					arch = "arm";
+					ti-secure {
+						content = <&am6xx_phycore_disable_rtc_dtbo>;
+						keyfile = "custMpk.pem";
+					};
+					am6xx_phycore_disable_rtc_dtbo: blob-ext {
+						filename = "dts/upstream/src/arm64/ti/k3-am6xx-phycore-disable-rtc.dtbo";
+					};
+				};
+
+				som-no-spi {
+					description = "k3-am6xx-phycore-disable-spi-nor";
+					type = "flat_dt";
+					compression = "none";
+					load = <0x8F004000>;
+					arch = "arm";
+					ti-secure {
+						content = <&am6xx_phycore_disable_spi_not_dtbo>;
+						keyfile = "custMpk.pem";
+					};
+					am6xx_phycore_disable_spi_not_dtbo: blob-ext {
+						filename = "dts/upstream/src/arm64/ti/k3-am6xx-phycore-disable-spi-nor.dtbo";
+					};
+				};
+
+				som-no-eth {
+					description = "k3-am6xx-phycore-disable-eth-phy";
+					type = "flat_dt";
+					compression = "none";
+					load = <0x8F008000>;
+					arch = "arm";
+					ti-secure {
+						content = <&am6xx_phycore_disable_eth_phy_dtbo>;
+						keyfile = "custMpk.pem";
+					};
+					am6xx_phycore_disable_eth_phy_dtbo: blob-ext {
+						filename = "dts/upstream/src/arm64/ti/k3-am6xx-phycore-disable-eth-phy.dtbo";
+					};
+				};
+
+				som-qspi {
+					description = "k3-am6xx-phycore-qspi-nor";
+					type = "flat_dt";
+					compression = "none";
+					load = <0x8F00C000>;
+					arch = "arm";
+					ti-secure {
+						content = <&am6xx_phycore_disable_qspi_nor_dtbo>;
+						keyfile = "custMpk.pem";
+					};
+					am6xx_phycore_disable_qspi_nor_dtbo: blob-ext {
+						filename = "dts/upstream/src/arm64/ti/k3-am6xx-phycore-qspi-nor.dtbo";
+					};
+				};
+
+				fdt-0 {
+					description = "k3-am625-phyboard-lyra-rdk";
+					type = "flat_dt";
+					arch = "arm";
+					compression = "none";
+					ti-secure {
+						content = <&am625_phyboard_lyra_dtb>;
+						keyfile = "custMpk.pem";
+					};
+					am625_phyboard_lyra_dtb: blob-ext {
+						filename = AM625_PHYBOARD_LYRA_DTB;
+					};
+					hash {
+						algo = "crc32";
+					};
+				};
+			};
+
+			configurations {
+				default = "conf-0";
+
+				conf-0 {
+					description = "k3-am625-phyboard-lyra-rdk";
+					firmware = "uboot";
+					loadables = "uboot",
+						    "som-no-rtc",
+						    "som-no-spi",
+						    "som-no-eth",
+						    "som-qspi";
+					fdt = "fdt-0";
+				};
+			};
+		};
+	};
+};
+
+&binman {
+	ti-spl_unsigned {
+		insert-template = <&ti_spl_unsigned_am625_template>;
+		fit {
+			images {
+				fdt-0 {
+					description = "k3-am625-phyboard-lyra-rdk";
+					type = "flat_dt";
+					arch = "arm";
+					compression = "none";
+					spl_am625_phyboard_lyra_dtb_unsigned: blob {
+						filename = SPL_AM625_PHYBOARD_LYRA_DTB;
+					};
+				};
+			};
+
+			configurations {
+				default = "conf-hs-fs";
+
+				conf-hs-fs {
+					description = "k3-am625-phyboard-lyra-rdk-hs-fs";
+					firmware = "atf";
+					loadables = "tee", "tifsstub-fs", "dm", "spl";
+					fdt = "fdt-0";
+				};
+				conf-hs-se {
+					description = "k3-am625-phyboard-lyra-rdk-hs-se";
+					firmware = "atf";
+					loadables = "tee", "tifsstub-hs", "dm", "spl";
+					fdt = "fdt-0";
+				};
+				conf-gp {
+					description = "k3-am625-phyboard-lyra-rdk-gp";
+					firmware = "atf";
+					loadables = "tee", "tifsstub-gp", "dm", "spl";
+					fdt = "fdt-0";
+				};
+			};
+		};
+	};
+};
+
+&binman {
+	u-boot_unsigned {
+		insert-template = <&u_boot_unsigned_template>;
+
+		fit {
+			images {
+				uboot {
+					description = "U-Boot for phyCORE-AM62x";
+				};
+
+				fdt-0 {
+					description = "k3-am625-phyboard-lyra-rdk";
+					type = "flat_dt";
+					arch = "arm";
+					compression = "none";
+					am625_phyboard_lyra_dtb_unsigned: blob {
+						filename = AM625_PHYBOARD_LYRA_DTB;
+					};
+					hash {
+						algo = "crc32";
+					};
+				};
+			};
+
+			configurations {
+				default = "conf-0";
+
+				conf-0 {
+					description = "k3-am625-phyboard-lyra-rdk";
+					firmware = "uboot";
+					loadables = "uboot";
+					fdt = "fdt-0";
+				};
+			};
+		};
+	};
+};
+
+#include "k3-binman-capsule.dtsi"
+
+&capsule_tispl {
+	efi-capsule {
+		/*
+		 * The GUID is generated dynamically by taking a namespace UUID and hashing
+		 * it with the board compatible and fw_image name:
+		 * mkeficapsule guidgen k3-am625-phyboard-lyra-rdk.dtb PHYCORE_AM62X_SPL
+		 */
+		image-guid = "09841C3F-F177-5D57-B1F6-754D92879205";
+	};
+};
+
+&capsule_uboot {
+	efi-capsule {
+		/*
+		 * The GUID is generated dynamically by taking a namespace UUID and hashing
+		 * it with the board compatible and fw_image name:
+		 * mkeficapsule guidgen k3-am625-phyboard-lyra-rdk.dtb PHYCORE_AM62X_UBOOT
+		 */
+		image-guid = "D11A9016-515E-503A-8872-3FF65384D0C4";
+	};
+};
+
+#endif /* CONFIG_TARGET_PHYCORE_AM62X_A53 */

@@ -1,0 +1,4 @@
+Qualcomm Technologies, Inc. QCS404 evaluation board
+M:	Sumit Garg <sumit.garg@linaro.org>
+S:	Maintained
+F:	board/qualcomm/qcs404-evb/

@@ -1,0 +1,78 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Xilinx Versal NET SOC driver
+ *
+ * Copyright (C) 2022-2026, Advanced Micro Devices, Inc.
+ */
+
+#include <dm.h>
+#include <soc.h>
+#include <asm/arch/hardware.h>
+#include <asm/arch/sys_proto.h>
+
+#include <linux/bitfield.h>
+
+/*
+ * v1 -> 0x10 - ES1
+ * v2 -> 0x20 - Production
+ */
+static const char versal_family[] = "Versal NET";
+
+struct soc_xilinx_versal_net_priv {
+	const char *family;
+	char revision;
+};
+
+static int soc_xilinx_versal_net_get_family(struct udevice *dev, char *buf, int size)
+{
+	struct soc_xilinx_versal_net_priv *priv = dev_get_priv(dev);
+	int ret;
+
+	ret = snprintf(buf, size, "%s", priv->family);
+	if (ret >= size)
+		return -ENOSPC;
+
+	return 0;
+}
+
+static int soc_xilinx_versal_net_get_revision(struct udevice *dev, char *buf, int size)
+{
+	struct soc_xilinx_versal_net_priv *priv = dev_get_priv(dev);
+	int ret;
+
+	ret = snprintf(buf, size, "v%d", priv->revision);
+	if (ret >= size)
+		return -ENOSPC;
+
+	return 0;
+}
+
+static const struct soc_ops soc_xilinx_versal_net_ops = {
+	.get_family = soc_xilinx_versal_net_get_family,
+	.get_revision = soc_xilinx_versal_net_get_revision,
+};
+
+static int soc_xilinx_versal_net_probe(struct udevice *dev)
+{
+	struct soc_xilinx_versal_net_priv *priv = dev_get_priv(dev);
+	u32 version;
+	int ret;
+
+	ret = xilinx_pm_get_chipid(NULL, &version);
+	if (ret)
+		return ret;
+
+	priv->family = versal_family;
+	priv->revision = FIELD_GET(PS_VERSION_MASK, version);
+
+	return 0;
+}
+
+U_BOOT_DRIVER(soc_xilinx_versal_net) = {
+	.name		= "soc_xilinx_versal_net",
+	.id		= UCLASS_SOC,
+	.ops		= &soc_xilinx_versal_net_ops,
+	.probe		= soc_xilinx_versal_net_probe,
+	.priv_auto	= sizeof(struct soc_xilinx_versal_net_priv),
+	.flags		= DM_FLAG_PRE_RELOC,
+};

@@ -1,0 +1,9 @@
+# Build with: build-totoro/tools/mkimage -A arm -T script -C none \
+#   -n Totoro -d board/samsung/totoro/boot.cmd.example boot.scr
+# bootdev and bootpart are set by the menu for SD or internal STL.
+echo Loading payload from ${bootdev} ${bootpart}
+if load ${bootdev} ${bootpart} 0x82000000 /payload.bin; then
+    go 0x82000000
+else
+    echo Cannot load /payload.bin
+fi

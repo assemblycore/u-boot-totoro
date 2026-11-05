@@ -1,0 +1,7 @@
+COLIBRI_T20
+M:	Francesco Dolcini <francesco.dolcini@toradex.com>
+S:	Maintained
+F:	board/toradex/colibri_t20/
+F:	board/toradex/common/
+F:	configs/colibri_t20_defconfig
+F:	arch/arm/dts/tegra20-colibri.dts

@@ -1,0 +1,5 @@
+TRIMSLICE BOARD
+M:	Tom Warren <twarren@nvidia.com>
+S:	Maintained
+F:	board/compulab/trimslice/
+F:	configs/trimslice_defconfig

@@ -1,0 +1,14 @@
+LS1012ARDB BOARD
+M:	Pramod Kumar <pramod.kumar_1@nxp.com>
+S:	Maintained
+F:	board/nxp/ls1012ardb/
+F:	include/configs/ls1012ardb.h
+F:	configs/ls1012ardb_tfa_defconfig
+F:	configs/ls1012ardb_tfa_SECURE_BOOT_defconfig
+F:	configs/ls1012a2g5rdb_tfa_defconfig
+
+LS1012A2G5RDB BOARD
+M:	Pramod Kumar <pramod.kumar_1@nxp.com>
+S:      Maintained
+F:      board/nxp/ls1012ardb/
+F:      include/configs/ls1012a2g5rdb.h

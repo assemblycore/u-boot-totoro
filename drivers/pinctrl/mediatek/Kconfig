@@ -1,0 +1,13 @@
+if ARCH_MEDIATEK
+
+config PINCTRL_MTK
+	bool "MediaTek pinctrl driver"
+	depends on PINCTRL_GENERIC
+	default y if !TARGET_MT8183
+	select PINCONF
+	select REGMAP
+	select SYSCON
+	help
+	  Enable MediaTek pinctrl support.
+
+endif

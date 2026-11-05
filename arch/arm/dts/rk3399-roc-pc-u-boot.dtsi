@@ -1,0 +1,61 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * Copyright (C) 2019 Levin Du <djw@t-chip.com.cn>
+ */
+
+#include "rk3399-u-boot.dtsi"
+#include "rk3399-sdram-lpddr4-100.dtsi"
+
+/ {
+	config {
+		sysreset-gpio = <&gpio1 RK_PA6 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+&i2c7 {
+	bootph-pre-ram;
+};
+
+&i2c7_xfer {
+	bootph-pre-ram;
+};
+
+&gpio4 {
+	bootph-pre-ram;
+};
+
+&gpio1 {
+	bootph-pre-ram;
+};
+
+&spi1 {
+	flash@0 {
+		bootph-pre-ram;
+		bootph-some-ram;
+	};
+};
+
+&vcc3v0_sd {
+	bootph-pre-ram;
+};
+
+&vcc3v0_sd_en {
+	bootph-pre-ram;
+};
+
+&vcc5v0_host {
+	regulator-always-on;
+};
+
+&vcc_sdio {
+	regulator-always-on;
+};
+
+&vcc_sys {
+	regulator-always-on;
+};
+
+&vdd_log {
+	regulator-min-microvolt = <430000>;
+	regulator-init-microvolt = <950000>;
+};

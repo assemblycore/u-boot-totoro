@@ -1,0 +1,288 @@
+// SPDX-License-Identifier: GPL-2.0+
+/* Copyright (C) 2025 Linaro Ltd. */
+
+#include <console.h>
+#include <display_options.h>
+#include <env.h>
+#include <image.h>
+#include <malloc.h>
+#include <net.h>
+#include <time.h>
+#include <dm/device.h>
+#include <linux/kconfig.h>
+#include <lwip/timeouts.h>
+#include <lwip/udp.h>
+#include "../nfs-common.h"
+
+static ulong timer_start;
+
+static struct nfs_ctx {
+	ip_addr_t nfs_server;
+	struct udp_pcb *pcb;
+} sess_ctx;
+
+/**************************************************************************
+ * RPC_LOOKUP - Lookup RPC Port numbers
+ **************************************************************************
+ */
+void rpc_req(int rpc_prog, int rpc_proc, uint32_t *data, int datalen)
+{
+	struct pbuf *pb;
+	int pktlen;
+	int sport;
+	err_t err;
+
+	pb = pbuf_alloc(PBUF_TRANSPORT, sizeof(struct rpc_t), PBUF_RAM);
+	if (!pb) {
+		debug("Failed to allocate pbuf to build RPC packet\n");
+		return;
+	}
+
+	rpc_req_common(rpc_prog, rpc_proc, data, datalen,
+		       pb->payload, &pktlen, &sport);
+
+	pbuf_realloc(pb, (u16_t)pktlen);
+
+	err = udp_sendto(sess_ctx.pcb, pb, &sess_ctx.nfs_server, sport);
+	debug_cond((err != ERR_OK), "Failed to send UDP packet err = %d\n", err);
+	pbuf_free(pb);
+}
+
+void nfs_refresh_timeout(void)
+{
+	timer_start = get_timer(0);
+}
+
+static void nfs_recv(void *arg, struct udp_pcb *pcb, struct pbuf *p,
+		     const ip_addr_t *addr, u16_t port)
+{
+	struct nfs_ctx *ctx = arg;
+	int plen;
+	struct rpc_t rpc_pkt;
+
+	if (!ip_addr_eq(addr, &ctx->nfs_server))
+		goto exitfree;
+
+	if (p->tot_len > sizeof(struct rpc_t))
+		goto exitfree;
+
+	plen = pbuf_copy_partial(p, &rpc_pkt.u.data[0], sizeof(rpc_pkt), 0);
+	nfs_pkt_recv(&rpc_pkt.u.data[0], plen);
+
+exitfree:
+	pbuf_free(p);
+}
+
+static int nfs_udp_init(struct nfs_ctx *ctx)
+{
+	ctx->pcb = udp_new();
+	if (!ctx->pcb)
+		return -ENOMEM;
+
+	ctx->pcb->local_port = nfs_our_port;
+	udp_recv(ctx->pcb, nfs_recv, ctx);
+
+	return 0;
+}
+
+static int nfs_timeout_check(void)
+{
+	if (get_timer(timer_start) < nfs_timeout)
+		return 0;
+	if (++nfs_timeout_count < NFS_RETRY_COUNT) {
+		puts("T ");
+		timer_start = get_timer(0);
+		nfs_send();
+		return 0;
+	}
+
+	return 1;
+}
+
+static int nfs_loop(struct net_lwip_ctx *net, ulong addr, char *fname,
+		    ip_addr_t srvip)
+{
+	int ret;
+
+	nfs_download_state = NETLOOP_FAIL;
+	net_set_state(NETLOOP_FAIL);
+
+	if (!fname || addr == 0)
+		return -1;
+
+	strlcpy(nfs_path_buff, fname, sizeof(nfs_path_buff));
+
+	nfs_filename = nfs_basename(nfs_path_buff);
+	nfs_path     = nfs_dirname(nfs_path_buff);
+
+	printf("Using %s device\n", net->dev->name);
+
+	printf("File transfer via NFS from server %s; our IP address is %s\n",
+	       ipaddr_ntoa(&srvip), env_get("ipaddr"));
+
+	printf("\nFilename '%s/%s'.", nfs_path, nfs_filename);
+
+	if (net_boot_file_expected_size_in_blocks) {
+		printf(" Size is 0x%x Bytes = ",
+		       net_boot_file_expected_size_in_blocks << 9);
+		print_size(net_boot_file_expected_size_in_blocks << 9, "");
+	}
+	printf("\nLoad address: 0x%lx\nLoading: *\b", addr);
+	image_load_addr = addr;
+
+	nfs_timeout_count = 0;
+	nfs_state = STATE_PRCLOOKUP_PROG_MOUNT_REQ;
+
+	ret = nfs_udp_init(&sess_ctx);
+	if (ret < 0) {
+		debug("Failed to init network interface, aborting for error = %d\n", ret);
+		return ret;
+	}
+
+	net_set_state(NETLOOP_CONTINUE);
+
+	ip_addr_set(&sess_ctx.nfs_server, &srvip);
+
+	nfs_send();
+
+	timer_start = get_timer(0);
+	do {
+		net_lwip_poll();
+		if (net_state != NETLOOP_CONTINUE)
+			break;
+		if (ctrlc()) {
+			printf("\nAbort\n");
+			break;
+		}
+
+		if (nfs_timeout_check())
+			break;
+	} while (true);
+	debug("%s: Loop exit at %lu\n", __func__, get_timer(0));
+
+	udp_remove(sess_ctx.pcb);
+	sess_ctx.pcb = NULL;
+
+	if (net_state == NETLOOP_SUCCESS) {
+		ret = 0;
+		if (net_boot_file_size > 0) {
+			printf("Bytes transferred = %u (%x hex)\n",
+			       net_boot_file_size, net_boot_file_size);
+			env_set_hex("filesize", net_boot_file_size);
+			env_set_hex("fileaddr", image_load_addr);
+		}
+
+	} else {
+		debug("%s: NFS loop failed\n", __func__);
+		ret = -1;
+	}
+
+	return ret;
+}
+
+int do_nfs(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
+{
+	struct net_lwip_ctx net = {};
+	int ret = CMD_RET_SUCCESS;
+	const char *arg = NULL;
+	char *arg_copy = NULL;
+	char *fname = NULL;
+	char *server_ip = NULL;
+	char *end;
+	ip_addr_t srvip;
+	ulong laddr;
+	ulong addr;
+
+	laddr = env_get_ulong("loadaddr", 16, image_load_addr);
+
+	switch (argc) {
+	case 1:
+		break;
+	case 2:
+		/*
+		 * Only one arg - accept two forms:
+		 * Just load address, or just boot file name. The latter
+		 * form must be written in a format which can not be
+		 * mis-interpreted as a valid number.
+		 */
+		addr = hextoul(argv[1], &end);
+		if (end == (argv[1] + strlen(argv[1]))) {
+			laddr = addr;
+		} else {
+			arg = argv[1];
+		}
+		break;
+	case 3:
+		if (strict_strtoul(argv[1], 16, &laddr)) {
+			ret = CMD_RET_USAGE;
+			goto out;
+		}
+		arg = argv[2];
+		break;
+	default:
+		ret = CMD_RET_USAGE;
+		goto out;
+	}
+
+	if (!arg)
+		arg = *net_boot_file_name ? net_boot_file_name : env_get("bootfile");
+
+	if (arg && *arg) {
+		arg_copy = strdup(arg);
+		if (!arg_copy) {
+			ret = CMD_RET_FAILURE;
+			goto out;
+		}
+		/*
+		 * Split the optional IPv4 prefix once. Keep the allocation base
+		 * for cleanup, and do not modify argv, bootfile or the global name.
+		 */
+		fname = strchr(arg_copy, ':');
+		if (fname) {
+			*fname++ = '\0';
+			server_ip = arg_copy;
+		} else {
+			fname = arg_copy;
+		}
+	}
+
+	if (!server_ip || !*server_ip)
+		server_ip = env_get("nfsserverip");
+	if (!server_ip || !*server_ip)
+		server_ip = env_get("serverip");
+	if (!server_ip || !*server_ip) {
+		log_err("error: nfsserverip/serverip not set\n");
+		ret = CMD_RET_FAILURE;
+		goto out;
+	}
+
+	if (!ipaddr_aton(server_ip, &srvip)) {
+		log_err("error: ipaddr_aton\n");
+		ret = CMD_RET_FAILURE;
+		goto out;
+	}
+
+	if (!fname || !*fname) {
+		log_err("error: no file name\n");
+		ret = CMD_RET_FAILURE;
+		goto out;
+	}
+
+	if (!laddr) {
+		log_err("error: no load address\n");
+		ret = CMD_RET_FAILURE;
+		goto out;
+	}
+
+	if (net_lwip_start(&net, NET_LWIP_ADDR_ENV_STRICT)) {
+		ret = CMD_RET_FAILURE;
+		goto out;
+	}
+
+	if (nfs_loop(&net, laddr, fname, srvip) < 0)
+		ret = CMD_RET_FAILURE;
+out:
+	net_lwip_stop(&net);
+	free(arg_copy);
+	return ret;
+}

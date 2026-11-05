@@ -1,0 +1,3 @@
+#include <configs/socfpga_n5x_defconfig>
+
+CONFIG_SOCFPGA_SECURE_VAB_AUTH=y

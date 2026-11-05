@@ -1,0 +1,5 @@
+HARMONY BOARD
+M:	Tom Warren <twarren@nvidia.com>
+S:	Maintained
+F:	board/nvidia/harmony/
+F:	configs/harmony_defconfig
