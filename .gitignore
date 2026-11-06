@@ -142,3 +142,9 @@ __pycache__
 
 # Clang's compilation database file
 /compile_commands.json
+
+# Totoro build artifacts
+/build-totoro/
+/build/
+*.o
+*.a
